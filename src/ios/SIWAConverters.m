@@ -60,8 +60,8 @@ id SIWANullIfNil(id value)
         @"state": SIWANullIfNil(credential.state),
         @"authorizationCode": [self convertData:credential.authorizationCode],
         @"identityToken": [self convertData:credential.identityToken],
-        @"email": SIWANullIfNil(credential.email),
-        @"fullName": SIWANullIfNil([SIWAConverters convertName:credential.fullName]),
+        @"email": credential.email,
+        @"fullName": [SIWAConverters convertName:credential.fullName],
         @"realUserStatus": @(credential.realUserStatus)
     };
 }
@@ -104,9 +104,9 @@ id SIWANullIfNil(id value)
     
     NSMutableDictionary *convertedName = [@{
         @"namePrefix": SIWANullIfNil(name.namePrefix),
-        @"givenName": SIWANullIfNil(name.givenName),
+        @"givenName": name.givenName,
         @"middleName": SIWANullIfNil(name.middleName),
-        @"familyName": SIWANullIfNil(name.familyName),
+        @"familyName": name.familyName,
         @"nameSuffix": SIWANullIfNil(name.nameSuffix),
         @"nickname": SIWANullIfNil(name.nickname)
     } mutableCopy];
