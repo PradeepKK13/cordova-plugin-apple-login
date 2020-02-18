@@ -61,7 +61,8 @@ id SIWANullIfNil(id value)
         @"authorizationCode": [self convertData:credential.authorizationCode],
         @"identityToken": [self convertData:credential.identityToken],
         @"email": credential.email,
-        @"fullName": [SIWAConverters convertName:credential.fullName],
+        @"familyName": credential.fullName.familyName,
+        @"fullName": credential.fullName.givenName,
         @"realUserStatus": @(credential.realUserStatus)
     };
 }
