@@ -62,7 +62,7 @@ id SIWANullIfNil(id value)
         @"identityToken": [self convertData:credential.identityToken],
         @"email": SIWANullIfNil(credential.email),
         @"familyName": SIWANullIfNil(credential.fullName.familyName),
-        @"fullName": SIWANullIfNil(credential),
+        @"fullName": [self convertData:credential],
         @"realUserStatus": @(credential.realUserStatus)
     };
 }
