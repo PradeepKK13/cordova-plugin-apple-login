@@ -60,9 +60,9 @@ id SIWANullIfNil(id value)
         @"state": SIWANullIfNil(credential.state),
         @"authorizationCode": [self convertData:credential.authorizationCode],
         @"identityToken": [self convertData:credential.identityToken],
-        @"email": credential.email,
-        @"familyName": credential.fullName.familyName,
-        @"fullName": credential.fullName.givenName,
+        @"email": SIWANullIfNil(credential.email),
+        @"familyName": SIWANullIfNil(credential.fullName.familyName),
+        @"fullName": SIWANullIfNil(credential.fullName.givenName),
         @"realUserStatus": @(credential.realUserStatus)
     };
 }
