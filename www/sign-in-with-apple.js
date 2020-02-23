@@ -11,6 +11,17 @@ module.exports = {
     Refresh: 2,
     Logout: 3,
   },
+  isAvailable: function() {
+    return new Promise(function(resolve, reject) {
+      cordova.exec(
+          resolve,
+          reject,
+          'SignInWithApple',
+          'isAvailable',
+          []
+      );
+    });
+  },
   request: function(options) {
     return new Promise(function(resolve, reject) {
       cordova.exec(
