@@ -69,29 +69,3 @@ SignInWithApple.request({
   console.info(credential)
 })
 ```
-
-### `SignInWithApple.getCredentialState(options)`
-
-Returns the user credential status.
-
-#### Options: 
-
-```js
-{
-  userId: 'userId'
-}
-```
-
-#### Returns: 
-
-see: https://developer.apple.com/documentation/authenticationservices/asauthorizationappleidprovider/credentialstate
-
-#### Sample: 
-
-```js
-SignInWithApple.getCredentialState({
-  userId: 'userId',  
-}).then(function (credentialState) {
-  console.info(credentialState)
-})
-```
