@@ -26,8 +26,5 @@
 
     <header-file src="src/ios/SignInWithApple.h" />
     <source-file src="src/ios/SignInWithApple.m" />
-
-    <header-file src="src/ios/SIWAConverters.h" />
-    <source-file src="src/ios/SIWAConverters.m" />
   </platform>
 </plugin>
