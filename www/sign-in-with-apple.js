@@ -5,6 +5,12 @@ module.exports = {
     FullName: 0,
     Email: 1
   },
+   Operation: {
+    Implicit: 0,
+    Login: 1,
+    Refresh: 2,
+    Logout: 3,
+  },
   request: function(options) {
     return new Promise(function(resolve, reject) {
       cordova.exec(
