@@ -1,114 +1,175 @@
-#import <Foundation/Foundation.h>
 #import <AuthenticationServices/AuthenticationServices.h>
+#import <Cordova/CDVPlugin.h> // this already includes Foundation.h
 
-#import "SignInWithApple.h"
-#import "SIWAConverters.h"
-
-@interface SignInWithApple () <ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding>
-
-@property (nonatomic) CDVInvokedUrlCommand* command;
-
+@interface SignInWithApple : CDVPlugin {
+  NSMutableString *_callbackId;
+}
 @end
 
 @implementation SignInWithApple
-
-- (void)isAvailable:(CDVInvokedUrlCommand*)command
-{
-    CDVPluginResult *pluginResult;
-    if (@available(iOS 13.0, *)) {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:YES];
-    } else {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:NO];
-    }
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+- (void)pluginInitialize {
+  NSLog(@"SignInWithApple initialize");
 }
 
-- (void)request:(CDVInvokedUrlCommand*)command
-{    
-    NSDictionary *options = command.arguments[0];
-    
-    if (@available(iOS 13.0, *)) {
-        self.command = command;
-        [self requestWithOptions:options];
-    } else {
-        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{
-            @"error": @"UNAVAILABLE_ERROR",
-            @"message": @"This device does not support Sign in with Apple."
-        }];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+- (NSArray<ASAuthorizationScope> *)convertScopes: (NSArray<NSNumber *> *)scopes
+{
+  NSMutableArray<ASAuthorizationScope> *convertedScopes = [NSMutableArray array];
+
+  for (NSNumber *scope in scopes) {
+    ASAuthorizationScope convertedScope = [self convertScope:scope];
+    if (convertedScope != nil) {
+      [convertedScopes addObject:convertedScope];
     }
+  }
+
+  return convertedScopes;
+}
+- (ASAuthorizationScope)convertScope: (NSNumber *)scope
+{
+  switch (scope.integerValue) {
+    case 0:
+      return ASAuthorizationScopeFullName;
+    case 1:
+      return ASAuthorizationScopeEmail;
+    default:
+      return nil;
+  }
 }
 
-- (void)getCredentialState:(CDVInvokedUrlCommand*)command
-{
-    NSDictionary *options = command.arguments[0];
+- (void)signin:(CDVInvokedUrlCommand *)command {
+  NSDictionary *options = command.arguments[0];
+  NSLog(@"SignInWithApple signin()");
 
-    if (@available(iOS 13.0, *)) {
-        ASAuthorizationAppleIDProvider *provider = [[ASAuthorizationAppleIDProvider alloc] init];
-        [provider getCredentialStateForUserID:options[@"userId"] completion:^(ASAuthorizationAppleIDProviderCredentialState credentialState, NSError * _Nullable error) {
-            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsNSInteger:credentialState];
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        }];
-    } else {
-        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{
-            @"error": @"UNAVAILABLE_ERROR",
-            @"message": @"This device does not support Sign in with Apple."
-        }];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-    }
-}
+  if (@available(iOS 13, *)) {
+    _callbackId = [NSMutableString stringWithString:command.callbackId];
 
-- (void)requestWithOptions: (NSDictionary *)options
-{
-    ASAuthorizationAppleIDRequest *request = [[[ASAuthorizationAppleIDProvider alloc] init] createRequest];
-    
+    ASAuthorizationAppleIDProvider *provider =
+        [[ASAuthorizationAppleIDProvider alloc] init];
+    ASAuthorizationAppleIDRequest *request = [provider createRequest];
+
     if (options[@"requestedScopes"]) {
-        request.requestedScopes = [SIWAConverters convertScopes:options[@"requestedScopes"]];
+        request.requestedScopes = [self convertScopes:options[@"requestedScopes"]];
     }
-    if (options[@"requestedOperation"]) {
-         request.requestedOperation = [SIWAConverters convertOperation:options[@"requestedOperation"]];
-    }
-    if (options[@"user"]) {
-        request.user = options[@"user"];
-    }
-    if (options[@"state"]) {
-        request.state = options[@"state"];
-    }
-    if (options[@"nonce"]) {
-        request.nonce = options[@"nonce"];
-    }
-    
-    ASAuthorizationController *controller = [[ASAuthorizationController alloc] initWithAuthorizationRequests:@[request]];
+
+    ASAuthorizationController *controller = [[ASAuthorizationController alloc]
+        initWithAuthorizationRequests:@[ request ]];
     controller.delegate = self;
-    controller.presentationContextProvider = self;
     [controller performRequests];
+
+  } else {
+    NSLog(@"SignInWithApple signin() ignored because your iOS version < 13");
+
+    CDVPluginResult *result =
+        [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                      messageAsDictionary:@{
+                        @"error" : @"PLUGIN_ERROR",
+                        @"code" : @"",
+                        @"localizedDescription" : @"",
+                        @"localizedFailureReason" : @"",
+                      }];
+    [self.commandDelegate sendPluginResult:result
+                                callbackId:command.callbackId];
+  }
 }
 
-#pragma mark - ASAuthorizationControllerDelegate
+- (void)authorizationController:(ASAuthorizationController *)controller
+    didCompleteWithAuthorization:(nonnull ASAuthorization *)authorization
+    API_AVAILABLE(ios(13.0)) {
+  ASAuthorizationAppleIDCredential *appleIDCredential =
+      [authorization credential];
 
-- (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithAuthorization:(ASAuthorization *)authorization
-{
-    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[SIWAConverters convertCredential:authorization.credential]];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.command.callbackId];
-    self.command = nil;
+  NSDictionary *fullName;
+  NSDictionary *fullNamePhonetic;
+  if (appleIDCredential.fullName) {
+    if (appleIDCredential.fullName.phoneticRepresentation) {
+      fullNamePhonetic = @{
+        @"namePrefix" :
+                appleIDCredential.fullName.phoneticRepresentation.namePrefix
+            ? appleIDCredential.fullName.phoneticRepresentation.namePrefix
+            : @"",
+        @"givenName" :
+                appleIDCredential.fullName.phoneticRepresentation.givenName
+            ? appleIDCredential.fullName.phoneticRepresentation.givenName
+            : @"",
+        @"middleName" :
+                appleIDCredential.fullName.phoneticRepresentation.middleName
+            ? appleIDCredential.fullName.phoneticRepresentation.middleName
+            : @"",
+        @"familyName" :
+                appleIDCredential.fullName.phoneticRepresentation.familyName
+            ? appleIDCredential.fullName.phoneticRepresentation.familyName
+            : @"",
+        @"nameSuffix" :
+                appleIDCredential.fullName.phoneticRepresentation.nameSuffix
+            ? appleIDCredential.fullName.phoneticRepresentation.nameSuffix
+            : @"",
+        @"nickname" : appleIDCredential.fullName.phoneticRepresentation.nickname
+            ? appleIDCredential.fullName.phoneticRepresentation.nickname
+            : @""
+      };
+    }
+    fullName = @{
+      @"namePrefix" : appleIDCredential.fullName.namePrefix
+          ? appleIDCredential.fullName.namePrefix
+          : @"",
+      @"givenName" : appleIDCredential.fullName.givenName
+          ? appleIDCredential.fullName.givenName
+          : @"",
+      @"middleName" : appleIDCredential.fullName.middleName
+          ? appleIDCredential.fullName.middleName
+          : @"",
+      @"familyName" : appleIDCredential.fullName.familyName
+          ? appleIDCredential.fullName.familyName
+          : @"",
+      @"nameSuffix" : appleIDCredential.fullName.nameSuffix
+          ? appleIDCredential.fullName.nameSuffix
+          : @"",
+      @"nickname" : appleIDCredential.fullName.nickname
+          ? appleIDCredential.fullName.nickname
+          : @"",
+      @"phoneticRepresentation" : fullNamePhonetic ? fullNamePhonetic : @{}
+    };
+  }
+  NSString *identityToken =
+      [[NSString alloc] initWithData:appleIDCredential.identityToken
+                            encoding:NSUTF8StringEncoding];
+  NSString *authorizationCode =
+      [[NSString alloc] initWithData:appleIDCredential.authorizationCode
+                            encoding:NSUTF8StringEncoding];
+  NSDictionary *dic = @{
+    @"user" : appleIDCredential.user ? appleIDCredential.user : @"",
+    @"state" : appleIDCredential.state ? appleIDCredential.state : @"",
+    @"fullName" : fullName ? fullName : @{},
+    @"email" : appleIDCredential.email ? appleIDCredential.email : @"",
+    @"identityToken" : identityToken,
+    @"authorizationCode" : authorizationCode
+  };
+
+  CDVPluginResult *result =
+      [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                    messageAsDictionary:dic];
+  [self.commandDelegate sendPluginResult:result callbackId:_callbackId];
 }
 
-- (void)authorizationController:(ASAuthorizationController *)controller didCompleteWithError:(NSError *)error
-{
-    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:@{
-        @"error": @"REQUEST_ERROR",
-        @"code": @(error.code),
-        @"message": error.localizedDescription
-    }];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:self.command.callbackId];
-    self.command = nil;
-}
+- (void)authorizationController:(ASAuthorizationController *)controller
+           didCompleteWithError:(NSError *)error API_AVAILABLE(ios(13.0)) {
+  NSLog(@" error => %@ ", [error localizedDescription]);
 
-#pragma mark - ASAuthorizationControllerPresentationContextProviding
-
-- (ASPresentationAnchor)presentationAnchorForAuthorizationController:(ASAuthorizationController *)controller
-{
-    return self.viewController.view.window;
+  CDVPluginResult *result =
+      [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                    messageAsDictionary:@{
+                      @"error" : @"ASAUTHORIZATION_ERROR",
+                      @"code" : error.code
+                          ? [NSString stringWithFormat:@"%ld", (long)error.code]
+                          : @"",
+                      @"localizedDescription" : error.localizedDescription
+                          ? error.localizedDescription
+                          : @"",
+                      @"localizedFailureReason" : error.localizedFailureReason
+                          ? error.localizedFailureReason
+                          : @"",
+                    }];
+  [self.commandDelegate sendPluginResult:result callbackId:_callbackId];
 }
 
 @end
