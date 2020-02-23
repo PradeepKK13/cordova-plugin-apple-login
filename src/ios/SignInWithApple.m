@@ -35,7 +35,16 @@
       return nil;
   }
 }
-
+- (void)isAvailable:(CDVInvokedUrlCommand*)command
+{
+    CDVPluginResult *pluginResult;
+    if (@available(iOS 13.0, *)) {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:YES];
+    } else {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsBool:NO];
+    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
 - (void)request:(CDVInvokedUrlCommand *)command {
   NSDictionary *options = command.arguments[0];
   NSLog(@"SignInWithApple signin()");
@@ -57,15 +66,15 @@
     [controller performRequests];
 
   } else {
-    NSLog(@"SignInWithApple signin() ignored because your iOS version < 13");
+    NSLog(@"SignInWithApple Request() ignored because your iOS version < 13");
 
     CDVPluginResult *result =
         [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
                       messageAsDictionary:@{
-                        @"error" : @"PLUGIN_ERROR",
-                        @"code" : @"",
-                        @"localizedDescription" : @"",
-                        @"localizedFailureReason" : @"",
+                        @"error" : @"UNAVAILABLE_ERROR",
+                        @"code" : @"104",
+                        @"localizedDescription" : @"This device does not support Sign in with Apple.",
+                        @"localizedFailureReason" : @"SignInWithApple Request() ignored because your iOS version < 13",
                       }];
     [self.commandDelegate sendPluginResult:result
                                 callbackId:command.callbackId];
