@@ -12,8 +12,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pscsrv/cordova-plugin-apple-login.git"
+    "url": "git+https://github.com/Srini-max/cordova-plugin-apple-login"
   },
-  "homepage": "https://github.com/pscsrv/cordova-plugin-apple-login",
+  "homepage": "https://github.com/Srini-max/cordova-plugin-apple-login",
   "license": "MIT"
 }
