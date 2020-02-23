@@ -1,8 +1,16 @@
 var exec = require('cordova/exec');
 
 module.exports = {
- 
-exports.signin = function(arg0, success, error) {
-  exec(success, error, "SignInWithApple", "signin", [arg0]);
-};
+  request: function(options) {
+    return new Promise(function(resolve, reject) {
+      cordova.exec(
+          resolve,
+          reject,
+          'SignInWithApple',
+          'request',
+          [options]
+      );
+    });
+  }
+
 };
