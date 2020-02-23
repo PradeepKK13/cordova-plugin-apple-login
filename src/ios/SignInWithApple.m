@@ -36,7 +36,7 @@
   }
 }
 
-- (void)signin:(CDVInvokedUrlCommand *)command {
+- (void)request:(CDVInvokedUrlCommand *)command {
   NSDictionary *options = command.arguments[0];
   NSLog(@"SignInWithApple signin()");
 
